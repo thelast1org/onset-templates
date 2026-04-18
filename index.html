@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onset — Social Template Renderer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg: #06060A;
+    --gold: #C9A84C;
+    --gold-dim: #A08637;
+    --gold-glow: #E8C85C;
+    --white: #F0EDE6;
+    --gray: #6B6860;
+    --gray-light: #9A958B;
+    --red: #FF4444;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --sans: 'Geist', -apple-system, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); overflow: hidden; }
+
+  /* ==========================================
+     RENDER CANVAS — exact Instagram dimensions
+     Puppeteer screenshots this element
+     ========================================== */
+
+  #render-canvas {
+    position: relative;
+    overflow: hidden;
+  }
+
+  #render-canvas.size-square {
+    width: 1080px;
+    height: 1080px;
+  }
+
+  #render-canvas.size-portrait {
+    width: 1080px;
+    height: 1350px;
+  }
+
+  #render-canvas.size-story {
+    width: 1080px;
+    height: 1920px;
+  }
+
+  /* ==========================================
+     SHARED ELEMENTS
+     ========================================== */
+
+  .brand-tag {
+    position: absolute;
+    bottom: 40px;
+    right: 50px;
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--gold-dim);
+    letter-spacing: 1px;
+  }
+
+  .source-tag {
+    position: absolute;
+    bottom: 42px;
+    left: 50px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--gray);
+  }
+
+  /* ==========================================
+     TEMPLATE: BOLD STATEMENT
+     ========================================== */
+
+  .tmpl-bold {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 100px 90px;
+    position: relative;
+  }
+
+  .tmpl-bold::before {
+    content: '';
+    position: absolute;
+    top: -200px; right: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .tmpl-bold::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .tmpl-bold .headline {
+    font-family: var(--serif);
+    font-size: 72px;
+    line-height: 1.1;
+    color: var(--white);
+    margin-bottom: 40px;
+    max-width: 850px;
+  }
+
+  .tmpl-bold .subtext {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--gray-light);
+    line-height: 1.5;
+    max-width: 700px;
+  }
+
+  /* ==========================================
+     TEMPLATE: STAT CALLOUT
+     ========================================== */
+
+  .tmpl-stat {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 80px;
+    position: relative;
+  }
+
+  .tmpl-stat::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .tmpl-stat .stat-number {
+    font-family: var(--serif);
+    font-size: 180px;
+    font-weight: 400;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+
+  .tmpl-stat .stat-unit {
+    font-family: var(--sans);
+    font-size: 24px;
+    font-weight: 300;
+    color: var(--gray-light);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 50px;
+  }
+
+  .tmpl-stat .stat-context {
+    font-family: var(--serif);
+    font-size: 42px;
+    line-height: 1.3;
+    color: var(--white);
+    max-width: 750px;
+  }
+
+  /* ==========================================
+     TEMPLATE: CAROUSEL SLIDE
+     ========================================== */
+
+  .tmpl-carousel {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    padding: 80px 80px 60px;
+    position: relative;
+  }
+
+  .tmpl-carousel .carousel-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 60px;
+  }
+
+  .tmpl-carousel .slide-number {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .tmpl-carousel .topic-tag {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 100px;
+  }
+
+  .tmpl-carousel .carousel-title {
+    font-family: var(--serif);
+    font-size: 58px;
+    line-height: 1.15;
+    color: var(--white);
+    margin-bottom: 50px;
+    max-width: 850px;
+  }
+
+  .tmpl-carousel .divider {
+    width: 60px;
+    height: 2px;
+    background: var(--gold);
+    margin-bottom: 50px;
+  }
+
+  .tmpl-carousel .carousel-body {
+    font-family: var(--sans);
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--gray-light);
+    line-height: 1.65;
+    max-width: 850px;
+    flex: 1;
+  }
+
+  .tmpl-carousel .carousel-body strong {
+    color: var(--white);
+    font-weight: 600;
+  }
+
+  .tmpl-carousel .carousel-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 40px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .tmpl-carousel .brand-mark {
+    font-family: var(--serif);
+    font-size: 28px;
+    color: var(--gold);
+  }
+
+  .tmpl-carousel .cta {
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--gray);
+    letter-spacing: 1px;
+  }
+
+  /* ==========================================
+     TEMPLATE: VERSUS / COMPARISON
+     ========================================== */
+
+  .tmpl-versus {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .tmpl-versus .vs-header {
+    padding: 60px 70px 40px;
+    text-align: center;
+  }
+
+  .tmpl-versus .vs-title {
+    font-family: var(--serif);
+    font-size: 48px;
+    color: var(--white);
+  }
+
+  .tmpl-versus .vs-columns {
+    display: flex;
+    flex: 1;
+    padding: 0 50px 50px;
+    gap: 30px;
+  }
+
+  .tmpl-versus .vs-col {
+    flex: 1;
+    border-radius: 20px;
+    padding: 40px 35px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .tmpl-versus .vs-col.bad {
+    background: rgba(255,60,60,0.06);
+    border: 1px solid rgba(255,60,60,0.15);
+  }
+
+  .tmpl-versus .vs-col.good {
+    background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.2);
+  }
+
+  .tmpl-versus .vs-col-label {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .tmpl-versus .vs-col.bad .vs-col-label { color: var(--red); }
+  .tmpl-versus .vs-col.good .vs-col-label { color: var(--gold); }
+
+  .tmpl-versus .vs-item {
+    font-family: var(--sans);
+    font-size: 20px;
+    line-height: 1.4;
+    color: var(--gray-light);
+    padding-left: 30px;
+    position: relative;
+  }
+
+  .tmpl-versus .vs-col.bad .vs-item::before {
+    content: '✕'; position: absolute; left: 0;
+    color: var(--red); font-weight: 700; font-size: 16px;
+  }
+
+  .tmpl-versus .vs-col.good .vs-item::before {
+    content: '✓'; position: absolute; left: 0;
+    color: var(--gold); font-weight: 700; font-size: 16px;
+  }
+
+  /* ==========================================
+     TEMPLATE: QUOTE / HOOK
+     ========================================== */
+
+  .tmpl-quote {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 100px;
+    position: relative;
+  }
+
+  .tmpl-quote::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .tmpl-quote::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .tmpl-quote .quote-mark {
+    font-family: var(--serif);
+    font-size: 120px;
+    color: var(--gold);
+    line-height: 0.5;
+    margin-bottom: 30px;
+    opacity: 0.4;
+  }
+
+  .tmpl-quote .quote-text {
+    font-family: var(--serif);
+    font-size: 56px;
+    line-height: 1.25;
+    color: var(--white);
+    max-width: 800px;
+  }
+
+  /* ==========================================
+     TEMPLATE: COVER SLIDE
+     ========================================== */
+
+  .tmpl-cover {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 100px 90px;
+    position: relative;
+  }
+
+  .tmpl-cover::before {
+    content: '';
+    position: absolute;
+    bottom: -100px; left: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .tmpl-cover .cover-eyebrow {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+
+  .tmpl-cover .cover-headline {
+    font-family: var(--serif);
+    font-size: 80px;
+    line-height: 1.08;
+    color: var(--white);
+    margin-bottom: 50px;
+    max-width: 850px;
+  }
+
+  .tmpl-cover .cover-sub {
+    font-family: var(--sans);
+    font-size: 22px;
+    color: var(--gray-light);
+    line-height: 1.5;
+    max-width: 650px;
+  }
+
+  .tmpl-cover .swipe-cta {
+    position: absolute;
+    bottom: 50px; left: 90px;
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--gray);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tmpl-cover .swipe-arrow {
+    font-size: 20px;
+    color: var(--gold-dim);
+  }
+
+  /* ==========================================
+     TEMPLATE: LIST / BREAKDOWN
+     ========================================== */
+
+  .tmpl-list {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    padding: 80px 80px 60px;
+    position: relative;
+  }
+
+  .tmpl-list .list-eyebrow {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+
+  .tmpl-list .list-title {
+    font-family: var(--serif);
+    font-size: 52px;
+    line-height: 1.12;
+    color: var(--white);
+    margin-bottom: 50px;
+    max-width: 800px;
+  }
+
+  .tmpl-list .list-items {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .tmpl-list .list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .tmpl-list .list-num {
+    font-family: var(--serif);
+    font-size: 36px;
+    color: var(--gold);
+    line-height: 1;
+    min-width: 40px;
+  }
+
+  .tmpl-list .list-text {
+    font-family: var(--sans);
+    font-size: 22px;
+    color: var(--gray-light);
+    line-height: 1.5;
+    padding-top: 4px;
+  }
+
+  .tmpl-list .list-text strong {
+    color: var(--white);
+    font-weight: 600;
+  }
+
+  .tmpl-list .list-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 40px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .tmpl-list .brand-mark {
+    font-family: var(--serif);
+    font-size: 28px;
+    color: var(--gold);
+  }
+
+  /* ==========================================
+     TEMPLATE: MYTH BUSTER
+     ========================================== */
+
+  .tmpl-myth {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 90px;
+    position: relative;
+  }
+
+  .tmpl-myth .myth-label {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+
+  .tmpl-myth .myth-label.is-myth { color: var(--red); }
+  .tmpl-myth .myth-label.is-fact { color: #44CC77; }
+
+  .tmpl-myth .myth-claim {
+    font-family: var(--serif);
+    font-size: 52px;
+    line-height: 1.15;
+    margin-bottom: 50px;
+    max-width: 850px;
+  }
+
+  .tmpl-myth .myth-claim.struck {
+    color: var(--gray);
+    text-decoration: line-through;
+    text-decoration-color: var(--red);
+    text-decoration-thickness: 3px;
+  }
+
+  .tmpl-myth .myth-claim.verified {
+    color: var(--white);
+  }
+
+  .tmpl-myth .myth-divider {
+    width: 60px;
+    height: 2px;
+    background: var(--gold);
+    margin-bottom: 40px;
+  }
+
+  .tmpl-myth .myth-truth {
+    font-family: var(--sans);
+    font-size: 24px;
+    color: var(--gray-light);
+    line-height: 1.6;
+    max-width: 750px;
+  }
+
+  .tmpl-myth .myth-truth strong {
+    color: var(--white);
+    font-weight: 600;
+  }
+
+  /* ==========================================
+     GOLD EMPHASIS — used in all templates
+     ========================================== */
+
+  em, .gold { color: var(--gold) !important; font-style: italic; }
+
+  /* ==========================================
+     PREVIEW DASHBOARD (only shown without params)
+     ========================================== */
+
+  .dashboard {
+    font-family: var(--sans);
+    color: var(--white);
+    padding: 60px;
+    overflow: auto;
+    min-height: 100vh;
+  }
+
+  .dashboard h1 {
+    font-family: var(--serif);
+    font-size: 48px;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+
+  .dashboard .subtitle {
+    font-size: 16px;
+    color: var(--gray-light);
+    margin-bottom: 50px;
+    line-height: 1.6;
+  }
+
+  .dashboard h2 {
+    font-family: var(--serif);
+    font-size: 28px;
+    color: var(--white);
+    margin: 40px 0 20px;
+  }
+
+  .dashboard code {
+    background: rgba(201,168,76,0.1);
+    color: var(--gold);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .dashboard pre {
+    background: #0e0e12;
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 12px;
+    padding: 24px 28px;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-x: auto;
+    color: var(--gray-light);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    margin: 16px 0 30px;
+  }
+
+  .dashboard pre .param { color: var(--gold); }
+  .dashboard pre .val { color: #88CCAA; }
+  .dashboard pre .comment { color: #555; }
+
+  .dashboard .template-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 20px 0 50px;
+  }
+
+  .dashboard .template-card {
+    background: #0e0e12;
+    border: 1px solid #1e1e22;
+    border-radius: 16px;
+    padding: 28px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .dashboard .template-card:hover {
+    border-color: var(--gold-dim);
+    transform: translateY(-2px);
+  }
+
+  .dashboard .template-card h3 {
+    font-family: var(--serif);
+    font-size: 22px;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  .dashboard .template-card .desc {
+    font-size: 14px;
+    color: var(--gray);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .dashboard .template-card .size-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 1px;
+    background: rgba(201,168,76,0.1);
+    padding: 4px 12px;
+    border-radius: 100px;
+    display: inline-block;
+  }
+
+  .dashboard .template-card .params-list {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--gray-light);
+    line-height: 1.8;
+  }
+
+  .dashboard table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 30px;
+  }
+
+  .dashboard th {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+  }
+
+  .dashboard td {
+    font-size: 14px;
+    color: var(--gray-light);
+    padding: 12px 16px;
+    border-bottom: 1px solid #1a1a1e;
+  }
+
+  .dashboard td code {
+    font-size: 13px;
+  }
+
+</style>
+</head>
+<body>
+
+<div id="render-canvas"></div>
+<div id="dashboard"></div>
+
+<script>
+// ============================================================
+// ONSET SOCIAL TEMPLATE RENDERER
+// ============================================================
+//
+// URL PARAMETER API:
+//
+// REQUIRED:
+//   template   = bold | stat | carousel | versus | quote | cover | list | myth
+//
+// TEMPLATE-SPECIFIC PARAMS (use {em}text{/em} for gold emphasis):
+//
+// bold:
+//   headline   = main text
+//   subtext    = supporting text
+//   source     = attribution (optional)
+//
+// stat:
+//   number     = the big number (e.g. "73%")
+//   unit       = label under number (e.g. "of supplement users")
+//   context    = explanation text
+//   source     = attribution
+//
+// carousel:
+//   slide      = slide indicator (e.g. "02 / 05")
+//   tag        = topic tag (e.g. "Absorption")
+//   title      = slide headline
+//   body       = body text (use {br} for line breaks, {b}text{/b} for bold)
+//   cta        = footer CTA (default: "swipe →")
+//
+// versus:
+//   title      = header text
+//   bad_label  = left column label (default: "What you're doing")
+//   good_label = right column label (default: "What works")
+//   bad        = pipe-separated items (e.g. "item 1|item 2|item 3")
+//   good       = pipe-separated items
+//
+// quote:
+//   text       = the quote
+//
+// cover:
+//   eyebrow   = small text above headline
+//   headline  = main headline
+//   subtext   = supporting text
+//
+// list:
+//   eyebrow   = category label
+//   title     = headline
+//   items     = pipe-separated items (use {b}text{/b} for bold)
+//
+// myth:
+//   myth      = the myth (will be struck through)
+//   truth     = the truth explanation (use {b}text{/b} for bold)
+//   myth_label = label text (default: "MYTH")
+//   truth_label = (optional, default: "REALITY")
+//
+// GLOBAL:
+//   size       = square (1080x1080) | portrait (1080x1350) | story (1080x1920)
+//                defaults per template type
+//   brand      = custom brand tag (default: "@theonset.app")
+//
+// ============================================================
+
+const params = new URLSearchParams(window.location.search);
+const template = params.get('template');
+
+function decode(key, fallback = '') {
+  const val = params.get(key);
+  if (!val) return fallback;
+  return decodeURIComponent(val);
+}
+
+function formatText(raw) {
+  if (!raw) return '';
+  return raw
+    .replace(/\{em\}(.*?)\{\/em\}/g, '<em>$1</em>')
+    .replace(/\{b\}(.*?)\{\/b\}/g, '<strong>$1</strong>')
+    .replace(/\{br\}/g, '<br><br>');
+}
+
+const brand = decode('brand', '@theonset.app');
+const canvas = document.getElementById('render-canvas');
+const dashboard = document.getElementById('dashboard');
+
+// Default sizes per template
+const defaultSizes = {
+  bold: 'square', stat: 'square', carousel: 'portrait',
+  versus: 'square', quote: 'square', cover: 'portrait',
+  list: 'portrait', myth: 'square'
+};
+
+if (template) {
+  // RENDER MODE — hide dashboard, show template
+  dashboard.style.display = 'none';
+  document.body.style.overflow = 'hidden';
+
+  const size = decode('size', defaultSizes[template] || 'square');
+  canvas.className = `size-${size}`;
+
+  switch (template) {
+
+    case 'bold':
+      canvas.innerHTML = `
+        <div class="tmpl-bold">
+          <div class="headline">${formatText(decode('headline', 'your headline here.'))}</div>
+          <div class="subtext">${formatText(decode('subtext', ''))}</div>
+          <div class="brand-tag">${brand}</div>
+          ${decode('source') ? `<div class="source-tag">${decode('source')}</div>` : ''}
+        </div>`;
+      break;
+
+    case 'stat':
+      canvas.innerHTML = `
+        <div class="tmpl-stat">
+          <div class="stat-number">${decode('number', '0%')}</div>
+          <div class="stat-unit">${decode('unit', '')}</div>
+          <div class="stat-context">${formatText(decode('context', ''))}</div>
+          ${decode('source') ? `<div class="source-tag">${decode('source')}</div>` : ''}
+          <div class="brand-tag">${brand}</div>
+        </div>`;
+      break;
+
+    case 'carousel':
+      canvas.innerHTML = `
+        <div class="tmpl-carousel">
+          <div class="carousel-top">
+            <div class="slide-number">${decode('slide', 'Slide 01')}</div>
+            <div class="topic-tag">${decode('tag', 'Topic')}</div>
+          </div>
+          <div class="carousel-title">${formatText(decode('title', ''))}</div>
+          <div class="divider"></div>
+          <div class="carousel-body">${formatText(decode('body', ''))}</div>
+          <div class="carousel-footer">
+            <div class="brand-mark">Onset</div>
+            <div class="cta">${decode('cta', 'swipe →')}</div>
+          </div>
+        </div>`;
+      break;
+
+    case 'versus': {
+      const badItems = decode('bad', '').split('|').filter(Boolean);
+      const goodItems = decode('good', '').split('|').filter(Boolean);
+      canvas.innerHTML = `
+        <div class="tmpl-versus">
+          <div class="vs-header">
+            <div class="vs-title">${formatText(decode('title', ''))}</div>
+          </div>
+          <div class="vs-columns">
+            <div class="vs-col bad">
+              <div class="vs-col-label">${decode('bad_label', "What you're doing")}</div>
+              ${badItems.map(i => `<div class="vs-item">${formatText(i.trim())}</div>`).join('')}
+            </div>
+            <div class="vs-col good">
+              <div class="vs-col-label">${decode('good_label', 'What works')}</div>
+              ${goodItems.map(i => `<div class="vs-item">${formatText(i.trim())}</div>`).join('')}
+            </div>
+          </div>
+          <div class="brand-tag">${brand}</div>
+        </div>`;
+      break;
+    }
+
+    case 'quote':
+      canvas.innerHTML = `
+        <div class="tmpl-quote">
+          <div class="quote-mark">"</div>
+          <div class="quote-text">${formatText(decode('text', ''))}</div>
+          <div class="brand-tag">${brand}</div>
+        </div>`;
+      break;
+
+    case 'cover':
+      canvas.innerHTML = `
+        <div class="tmpl-cover">
+          <div class="cover-eyebrow">${decode('eyebrow', '')}</div>
+          <div class="cover-headline">${formatText(decode('headline', ''))}</div>
+          <div class="cover-sub">${formatText(decode('subtext', ''))}</div>
+          <div class="swipe-cta">swipe to learn <span class="swipe-arrow">→</span></div>
+          <div class="brand-tag">${brand}</div>
+        </div>`;
+      break;
+
+    case 'list': {
+      const items = decode('items', '').split('|').filter(Boolean);
+      canvas.innerHTML = `
+        <div class="tmpl-list">
+          <div class="list-eyebrow">${decode('eyebrow', '')}</div>
+          <div class="list-title">${formatText(decode('title', ''))}</div>
+          <div class="list-items">
+            ${items.map((item, i) => `
+              <div class="list-item">
+                <div class="list-num">${i + 1}</div>
+                <div class="list-text">${formatText(item.trim())}</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="list-footer">
+            <div class="brand-mark">Onset</div>
+            <div class="brand-tag" style="position:static">${brand}</div>
+          </div>
+        </div>`;
+      break;
+    }
+
+    case 'myth':
+      canvas.innerHTML = `
+        <div class="tmpl-myth">
+          <div class="myth-label is-myth">${decode('myth_label', 'MYTH')}</div>
+          <div class="myth-claim struck">${formatText(decode('myth', ''))}</div>
+          <div class="myth-divider"></div>
+          <div class="myth-label is-fact">${decode('truth_label', 'REALITY')}</div>
+          <div class="myth-truth">${formatText(decode('truth', ''))}</div>
+          <div class="brand-tag">${brand}</div>
+        </div>`;
+      break;
+
+    default:
+      canvas.innerHTML = `<div style="color:red;padding:40px;font-family:var(--sans)">Unknown template: ${template}</div>`;
+  }
+
+} else {
+  // DASHBOARD MODE — show documentation
+  canvas.style.display = 'none';
+  document.body.style.overflow = 'auto';
+
+  dashboard.innerHTML = `
+    <div class="dashboard">
+      <h1>Onset Template Renderer</h1>
+      <p class="subtitle">
+        Parameterized social media templates for the Onset content pipeline.<br>
+        Pass URL parameters to render any template at exact Instagram dimensions.<br>
+        Puppeteer screenshots the <code>#render-canvas</code> element in your n8n workflow.
+      </p>
+
+      <h2>Templates</h2>
+      <div class="template-grid">
+        <div class="template-card" onclick="window.location.href='?template=bold&headline=your+magnesium+glycinate+is+probably+doing+{em}nothing.{/em}&subtext=68%25+of+supplement+users+take+magnesium.+the+actual+deficiency+isn%27t+magnesium+—+it%27s+knowing+which+form+your+body+can+use.'">
+          <h3>Bold Statement</h3>
+          <p class="desc">Provocative hook — single bold claim with supporting text. Your most shareable format.</p>
+          <span class="size-badge">1080 × 1080</span>
+          <div class="params-list">headline, subtext, source</div>
+        </div>
+        <div class="template-card" onclick="window.location.href='?template=stat&number=73%25&unit=of+supplement+users&context=are+taking+at+least+two+supplements+that+{em}fight+each+other{/em}+for+absorption.&source=NIH+Office+of+Dietary+Supplements'">
+          <h3>Stat Callout</h3>
+          <p class="desc">Big number + context. Data-driven shareable fact.</p>
+          <span class="size-badge">1080 × 1080</span>
+          <div class="params-list">number, unit, context, source</div>
+        </div>
+        <div class="template-card" onclick="window.location.href='?template=carousel&slide=Slide+02+/+05&tag=Absorption&title=zinc+and+iron+use+the+{em}same+doorway{/em}+into+your+cells.&body=When+you+take+zinc+and+iron+at+the+same+time,+they+compete+for+the+same+transporter+protein+—+{b}DMT-1{/b}.{br}Separate+them+by+{b}at+least+2+hours{/b}+and+you+get+the+full+benefit+of+each.'">
+          <h3>Carousel Slide</h3>
+          <p class="desc">Education content — one concept per slide with topic tag and slide counter.</p>
+          <span class="size-badge">1080 × 1350</span>
+          <div class="params-list">slide, tag, title, body, cta</div>
+        </div>
+        <div class="template-card" onclick="window.location.href='?template=versus&title=your+supplement+{em}timing{/em}&bad=Taking+everything+with+breakfast|Calcium+%2B+iron+at+the+same+time|Vitamin+D+without+fat|Magnesium+in+the+morning|B+vitamins+at+night&good=Splitting+across+3–4+time+blocks|Calcium+AM,+iron+PM+(2hr+gap)|Vitamin+D+with+a+meal+containing+fat|Magnesium+before+bed|B+vitamins+before+noon'">
+          <h3>Versus / Comparison</h3>
+          <p class="desc">Side-by-side — wrong way vs right way. High engagement format.</p>
+          <span class="size-badge">1080 × 1080</span>
+          <div class="params-list">title, bad, good, bad_label, good_label</div>
+        </div>
+        <div class="template-card" onclick="window.location.href='?template=quote&text=the+supplement+industry+doesn%27t+want+you+{em}informed.{/em}+they+want+you+{em}confused.{/em}'">
+          <h3>Quote / Hook</h3>
+          <p class="desc">Minimal — single bold phrase. The opinion/manifesto post.</p>
+          <span class="size-badge">1080 × 1080</span>
+          <div class="params-list">text</div>
+        </div>
+        <div class="template-card" onclick="window.location.href='?template=cover&eyebrow=Supplement+science&headline=5+interactions+your+supplement+app+{em}isn%27t+telling+you+about.{/em}&subtext=Published+nutrition+science+has+known+about+these+for+decades.+Your+supplement+stack+is+probably+working+against+itself.'">
+          <h3>Cover Slide</h3>
+          <p class="desc">First slide of a carousel — the hook that gets the swipe.</p>
+          <span class="size-badge">1080 × 1350</span>
+          <div class="params-list">eyebrow, headline, subtext</div>
+        </div>
+        <div class="template-card" onclick="window.location.href='?template=list&size=portrait&eyebrow=Timing+matters&title=the+{em}optimal{/em}+supplement+schedule+nobody+follows.&items={b}Morning+with+food{/b}+—+fat-soluble+vitamins+(D,+K,+E)+need+dietary+fat|{b}Morning+empty+stomach{/b}+—+iron+absorbs+best+without+competition|{b}Midday{/b}+—+B-complex+for+sustained+energy+(not+at+night)|{b}Evening+with+dinner{/b}+—+zinc+and+calcium,+separated+from+iron|{b}Before+bed{/b}+—+magnesium+glycinate+for+sleep+quality'">
+          <h3>List / Breakdown</h3>
+          <p class="desc">Numbered list with bold labels — educational how-to content.</p>
+          <span class="size-badge">1080 × 1350</span>
+          <div class="params-list">eyebrow, title, items (pipe-separated)</div>
+        </div>
+        <div class="template-card" onclick="window.location.href='?template=myth&myth=you+need+to+take+10,000+IU+of+Vitamin+D+every+day.&truth=NIH+sets+the+{b}Tolerable+Upper+Intake+Level{/b}+at+4,000+IU/day+for+adults.+Most+people+only+need+{b}600–2,000+IU{/b}+depending+on+blood+levels.+More+is+not+better+—+excess+vitamin+D+can+cause+calcium+buildup.&source=NIH+DRI+Tables'">
+          <h3>Myth Buster</h3>
+          <p class="desc">Strike-through myth + green truth label. Engagement magnet.</p>
+          <span class="size-badge">1080 × 1080</span>
+          <div class="params-list">myth, truth, myth_label, truth_label</div>
+        </div>
+      </div>
+
+      <h2>Text Formatting</h2>
+      <table>
+        <tr><th>Syntax</th><th>Effect</th><th>Example</th></tr>
+        <tr><td><code>{em}text{/em}</code></td><td>Gold italic emphasis</td><td>doing <em>nothing</em></td></tr>
+        <tr><td><code>{b}text{/b}</code></td><td>White bold</td><td>the <strong>real</strong> issue</td></tr>
+        <tr><td><code>{br}</code></td><td>Paragraph break</td><td>Line one. ¶ Line two.</td></tr>
+        <tr><td><code>|</code></td><td>Item separator (lists, versus)</td><td>item 1|item 2|item 3</td></tr>
+      </table>
+
+      <h2>n8n Integration</h2>
+      <pre><span class="comment">// Puppeteer node — Custom Script</span>
+
+<span class="comment">// 1. Build the URL from Google Sheets data</span>
+const <span class="param">baseUrl</span> = <span class="val">'https://your-host.com/onset-templates.html'</span>;
+const <span class="param">row</span> = items[0].json; <span class="comment">// from Google Sheets node</span>
+
+const <span class="param">url</span> = \`\${baseUrl}?template=\${row.template}&headline=\${encodeURIComponent(row.headline)}&subtext=\${encodeURIComponent(row.subtext)}\`;
+
+<span class="comment">// 2. Navigate and screenshot</span>
+await page.setViewport({ <span class="param">width</span>: <span class="val">1080</span>, <span class="param">height</span>: <span class="val">1080</span> });
+await page.goto(<span class="param">url</span>, { waitUntil: <span class="val">'networkidle0'</span> });
+await page.waitForTimeout(<span class="val">1000</span>); <span class="comment">// wait for fonts</span>
+
+const <span class="param">canvas</span> = await page.$(<span class="val">'#render-canvas'</span>);
+const <span class="param">screenshot</span> = await canvas.screenshot({ <span class="param">type</span>: <span class="val">'png'</span> });
+
+<span class="comment">// 3. Return as binary for the next node (Instagram publish)</span>
+return [{ json: {}, binary: { data: { data: screenshot.toString(<span class="val">'base64'</span>), mimeType: <span class="val">'image/png'</span>, fileName: <span class="val">\`onset-\${row.template}-\${row.id}.png\`</span> } } }];</pre>
+
+      <h2>Google Sheet Columns</h2>
+      <table>
+        <tr><th>Column</th><th>Example Value</th></tr>
+        <tr><td><code>id</code></td><td>001</td></tr>
+        <tr><td><code>date</code></td><td>2026-04-21</td></tr>
+        <tr><td><code>template</code></td><td>bold</td></tr>
+        <tr><td><code>headline</code></td><td>your magnesium glycinate is probably doing {em}nothing.{/em}</td></tr>
+        <tr><td><code>subtext</code></td><td>68% of supplement users take magnesium...</td></tr>
+        <tr><td><code>body</code></td><td>(for carousel slides)</td></tr>
+        <tr><td><code>tag</code></td><td>Absorption</td></tr>
+        <tr><td><code>slide</code></td><td>Slide 02 / 05</td></tr>
+        <tr><td><code>bad</code></td><td>item 1|item 2|item 3</td></tr>
+        <tr><td><code>good</code></td><td>item 1|item 2|item 3</td></tr>
+        <tr><td><code>source</code></td><td>NIH ODS</td></tr>
+        <tr><td><code>caption</code></td><td>Instagram caption text...</td></tr>
+        <tr><td><code>hashtags</code></td><td>#supplements #wellness</td></tr>
+        <tr><td><code>status</code></td><td>draft / approved / published</td></tr>
+      </table>
+
+      <h2>Hosting</h2>
+      <p class="subtitle" style="margin-bottom:20px">
+        This HTML file needs to be served at a URL that your n8n Puppeteer node can reach.<br>
+        Options, simplest first:
+      </p>
+      <table>
+        <tr><th>Option</th><th>How</th><th>Cost</th></tr>
+        <tr><td><code>Supabase Storage</code></td><td>Upload to a public bucket. You already have Supabase.</td><td>$0</td></tr>
+        <tr><td><code>GitHub Pages</code></td><td>Push to a repo, enable Pages. Free HTTPS.</td><td>$0</td></tr>
+        <tr><td><code>Local file://</code></td><td>Puppeteer can open local files if self-hosted n8n.</td><td>$0</td></tr>
+        <tr><td><code>Vercel / Netlify</code></td><td>Drag and drop deploy.</td><td>$0</td></tr>
+      </table>
+
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
